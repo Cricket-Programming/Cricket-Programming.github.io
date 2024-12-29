@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>ConnectMe Chat</title>
+    <style>
+        /*
+        person count and name/icon at top
+        In a minor way, refactor UI code so that it will be easier to understand.
+        Different thread user saving and accessing
+
+        Delete X for messages and threads
+        Editing option - custom right click menu or show it when onmouseenter show close, onmouseleave hide close
+        Clear All and Clear All Threads might go away when I come up with custom deleting menu 
+
+        typeBox color area so  you cannot see text through
+        typeBox should not stay in a single position
+        spam blocker.
+        Bugs:
+        Line does not stay at bottom
+
+        */
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --width-threads: 270px;
+            /*CSS variable*/
+            --main-color: rgb(234, 240, 240);
+        }
+
+        body {
+
+            background-color: var(--main-color);
+            /*#EAF0F0*/
+        }
+
+        #flexContainerTopOptions {
+            /*all flex-items have margin-left on them*/
+            margin-bottom: -2px;
+            display: flex;
+        }
+
+        #logo {
+            color: rgb(30, 210, 240);
+            font-size: 20px;
+        }
+
+        #clearAll {
+            /*button*/
+            margin-left: 25px;
+            font-size: 15px;
+            width: 80px;
+            height: 25px;
+        }
+
+        #threadsTitle {
+            margin-left: 715px;
+            margin-top: 0px;
+            font-size: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #newThreadBtn,
+        #clearAllThreads {
+            /*button*/
+            margin-left: 10px;
+            font-size: 13px;
+            width: 100px;
+            height: 25px;
+        }
+
+        .modal {
+            display: none;
+            /* Hidden by default */
+            position: fixed;
+            /* Stay in place */
+            z-index: 1;
+            /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%;
+            /* Full width */
+            height: 100%;
+            /* Full height */
+            overflow: auto;
+            /* Enable scroll if needed */
+            background-color: rgb(0, 0, 0);
+            /* Fallback color */
+            background-color: rgba(0, 0, 0, 0.4);
+            /* Black w/ opacity */
+        }
+
+        /* Modal Content/Box */
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            /* 15% from the top and centered */
+            padding: 10px;
+            border: 1px solid #888;
+            width: 60%;
+            /* Could be more or less, depending on screen size */
+            height: 400px;
+            font-family: 'Gill Sans', 'Gill Sans MT', C alibri, 'Trebuchet MS', sans-serif;
+            font-size: 20px;
+        }
+
+        /* The Close Buttons */
+
+        .threadModalCloseBtn {
+            /*.deleteMessage*/
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .threadModalCloseBtn:hover,
+        .threadModalCloseBtn:focus {
+            /*.deleteMessage:hover*/
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .actualMessage span {
+            display: none;
+        }
+
+        .grid-container {
+            /*grids stuff will be a class*/
+            /* background-color: #2196F3; */
+            margin-left: 10px;
+            margin-bottom: 55px;
+
+            display: grid;
+            grid-template-columns: 900px var(--width-threads);
+            column-gap: 50px;
+        }
+
+        #threads {
+            /*threads a grid-item*/
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+            font-size: 20px;
+        }
+
+        #threads div:hover {
+            cursor: default;
+            /*cursor: grab;*/
+            color: rgb(0, 136, 255);
+        }
+
+        #threads hr {
+            width: var(--width-threads);
+            margin-right: 30px;
+        }
+
+        #messageWrapper:hover {
+            background-color: rgb(213, 227, 227);
+        }
+
+        #date {
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #actualMessage {
+            /*This div is ONLY for actual messages, not the date*/
+            margin-bottom: 15px;
+            width: 830px;
+            word-wrap: break-word;
+            font-family: Helvetica, 'Amasis MT pro', 'Times New Roman';
+        }
+
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0px;
+            padding-bottom: 10px;
+            position: fixed;
+            /*left: 20%; This is to move over the typebox*/
+            bottom: 0;
+        }
+
+        #typeBox {
+            font-size: 20px;
+            width: 900px;
+            font-family: helvetica, sans-serif;
+        }
+
+        #separatingLine {
+            background-color: black;
+            width: 3px;
+
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 950px;
+            margin-bottom: 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="demo"></div>
+
+    <div id="flexContainerTopOptions">
+        <div id="logo">ConnectMe Chat</div>
+        <button id="clearAll" onclick="messageStorage.clearAllMessages()">Clear All</button>
+        <p id="threadsTitle">Threads</p>
+        <button id="newThreadBtn" onclick="">New Thread</button>
+        <button id="clearAllThreads" onclick="threadNamesStorage.clearAllThreadNames()">Clear All</button>
+    </div>
+    <div class="grid-container">
+        <div class="grid-item" id="messages"></div>
+        <!--onmouseenter="background color is blue" onmouseleave="style.backgroundColor='var(--main-color)'"-->
+        <div class="grid-item" id="threads">
+            <!--<div>Chat with friend 1<hr></div>
+            <div>Group Gorilla Tag VR<hr></div>-->
+        </div>
+    </div>
+    <div id="separatingLine"></div>
+    <ul>
+        <textarea placeholder="Type Here" id="typeBox" onkeydown="addMessage(event)"></textarea>
+    </ul>
+
+    <!-- The Modal -->
+    <div id="myModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="threadModalCloseBtn">&times;</span>
+            <div name="gridcontainerformodel"
+                style="background-color: lightcyan; display: grid; grid-template-columns: 50% auto; grid-template-rows: 100px 100px; column-gap: 50px; row-gap: 150px;">
+                <p style="background-color: yellowgreen; grid-row-start: 1; grid-row-end: 3; border: 1px solid black;">
+                    <!--grid-item1-->
+                    <span>Add People</span><br>
+
+                    <input type="checkbox" id="friend1" name="">
+                    <label for="friend1">Friend1</label><br>
+                    <input type="checkbox" id="friend2" name="">
+                    <label for="friend2">Friend2</label><br>
+                    <input type="checkbox" id="friend3" name="">
+                    <label for="friend3">Friend3</label><br>
+                </p>
+                <p style="background-color: yellowgreen;">Thread Name: <input id="newThreadName" type="text"></p>
+
+                <button id="CreateThreadbtn" onclick="addThread()"
+                    style="width: 200px; height: 50px; font-size: 23px; ">Create Thread</button><!--grid-item3-->
+            </div>
+        </div>
+    </div>
+    <script>
+        "use strict";
+        const demo = document.getElementById("demo");
+        //modal and adding thread code
+        const modal = document.getElementById("myModal");
+        const openbtn = document.getElementById("newThreadBtn"); //button that opens the modal
+        const threadModalCloseBtn = document.getElementsByClassName("threadModalCloseBtn")[0]; //closing modal X span element
+        const newThreadName = document.getElementById("newThreadName")
+        const createThreadbtn = document.getElementById("CreateThreadbtn");
+        openbtn.onclick = function () { //opens the modal
+            modal.style.display = "block";
+            newThreadName.focus();
+        }
+        let closeModal = () => {
+            modal.style.display = "none";
+            newThreadName.value = "";
+        }
+        // When the user clicks on <span> (x), close the modal
+        threadModalCloseBtn.onclick = function () { closeModal(); }
+
+        //anywhere outside of the modal content, close it
+        window.onclick = function (event) {
+            if (event.target === modal) { closeModal(); }
+        }
+        //createThreadbtn.onclick = addThread();
+
+        const typeBox = document.getElementById("typeBox");
+        const messages = document.getElementById("messages");
+        const threads = document.getElementById("threads");
+        const separatingLine = document.getElementById("separatingLine");
+
+        //empty typebox "type here" placeholder
+        if (typeBox.placeholder != "") {
+            typeBox.addEventListener('focus', (e) => { //same as onFocus=""
+                typeBox.placeholder = '';
+            });
+        }
+        function shownDate() {
+            const d = new Date(); //remember const and let can be declared many times, but var cannot
+            let hours = d.getHours();
+            let _12HRclock = (hours >= 12) ? "PM" : "AM"; //simplified if else statement
+            if (hours > 12) { hours -= 12; }
+            let minutes = d.getMinutes();
+            if (minutes < 10) { minutes = "0" + minutes; } //concatenation 6 = 06
+            let shownDate = d.toDateString() + ", " + hours + ":" + minutes + " " + _12HRclock;
+            return shownDate; //this shown date is used for newMessage.innerText
+        }
+        const textBoxHeight = 27;
+        const textAreaHTMLCollection = document.getElementsByTagName("textarea");
+
+        //this for loop and Oninput() keeps the textbox resizing
+        //textBox[i] is the typeBox 
+        //https://stackoverflow.com/questions/454202/creating-a-textarea-with-auto-resize 
+        for (let i = 0; i < textAreaHTMLCollection.length; i++) {
+            if (textAreaHTMLCollection[i].value === '') {
+                textAreaHTMLCollection[i].setAttribute("style", "height:" + textBoxHeight + "px; overflow-y:hidden;");
+            } else {
+                textAreaHTMLCollection[i].setAttribute("style", "height:" + (textAreaHTMLCollection[i].scrollHeight) + "px; overflow-y:hidden;");
+            }
+            textAreaHTMLCollection[i].addEventListener("input", OnInput, false);
+        }
+        function OnInput(e) {
+            this.style.height = 0; //this is textBox[i]
+            this.style.height = (this.scrollHeight) + "px";
+        }
+
+        //separatingLine.style.height = document.body.scrollHeight;
+        function addMessage(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                let onlyWhiteSpace = typeBox.value.trim().length === 0;
+                if (onlyWhiteSpace === false) { //check to make sure typeBox is not all whitespace
+                    const messageWrapper = document.createElement("div");
+                    const date = document.createElement("div");
+                    const newMessage = document.createElement("div");
+                    const deleteMessage = document.createElement("span");
+
+                    newMessage.innerText = typeBox.value;
+                    date.innerText = shownDate();
+                    deleteMessage.innerHTML = "&times;"
+                    deleteMessage.style.float = "right";
+
+                    messageWrapper.setAttribute('id', "messageWrapper")
+                    date.setAttribute('id', "date");
+                    newMessage.setAttribute('id', "actualMessage");
+                    deleteMessage.setAttribute("class", "deleteMessage");
+
+                    newMessage.appendChild(deleteMessage);
+                    messages.appendChild(messageWrapper);
+                    messageWrapper.appendChild(date);
+                    messageWrapper.appendChild(newMessage);
+
+                    deleteMessage.onclick = function () {
+                    }
+                    //must be after the append
+                    window.scrollTo(0, document.body.scrollHeight);
+                    messageStorage.saveMessage();
+                    //separatingLine.style.height = document.body.scrollHeight;
+
+                    typeBox.value = "";
+                    typeBox.style.height = textBoxHeight + "px";
+                }
+            }
+        }
+
+        let messageStorage = {
+            loadMessages: function () { messages.innerHTML = localStorage.message; }, //don't need to declare it?
+            saveMessage: function () { localStorage.message = messages.innerHTML; },
+            clearAllMessages: function () {
+                localStorage.message = "";
+                messages.innerHTML = "";
+            }
+        }
+        if (localStorage.message) messageStorage.loadMessages();
+
+        //threadtitle storage and adding
+
+        function colorThread() {
+            for (var i = 0; i < threads.children.length; i++) {
+                threads.children[i].style.backgroundColor = "var(--main-color)";
+            }
+            this.style.backgroundColor = "blue";
+        }
+        let threadNamesStorage = {
+            loadThreadNames: function () {
+                threads.innerHTML = localStorage.threadNames;
+                for (var i = 0; i < threads.children.length; i++) { //after localStorage, the events may not work. THis gives them the event again.
+                    threads.children[i].style.backgroundColor = "var(--main-color)";
+                    threads.children[i].onclick = colorThread;
+                }
+            },
+            saveThreadNames: function () { localStorage.threadNames = threads.innerHTML; },
+            clearAllThreadNames: function () {
+                localStorage.threadNames = "";
+                threads.innerHTML = "";
+            }
+        }
+        if (localStorage.threadNames) threadNamesStorage.loadThreadNames();
+
+        function addThread() {
+            if (newThreadName.value.trim() != "") {
+                const newThread = document.createElement("div");
+                newThread.innerText = newThreadName.value; //it is trimmed here
+
+                let newhr = document.createElement("hr");
+                newThread.appendChild(newhr); //the hr is appended as a child to newThread (<div>Filler<hr></div>)
+                newThread.onclick = colorThread;
+                threads.prepend(newThread);
+                closeModal();
+                threadNamesStorage.saveThreadNames();
+            }
+        }
+    </script>
+</body>
+
+</html>
